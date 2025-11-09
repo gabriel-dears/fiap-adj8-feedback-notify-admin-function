@@ -54,7 +54,7 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
     }
 
     @Override
-    public void accept(PubSubMessage message, Context context) throws IOException {
+    public void accept(PubSubMessage message, Context context) {
         String decoded = new String(Base64.getDecoder().decode(message.data));
         logger.info("📨 Received Pub/Sub message: " + decoded);
 
@@ -62,7 +62,7 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
         notifyAdmin(feedback);
     }
 
-    private void notifyAdmin(AlertMessageDetails feedback) throws IOException {
+    private void notifyAdmin(AlertMessageDetails feedback) {
         logger.info("📩 Notifying admins about feedback: " + feedback.getLessonName());
 
         List<String> adminEmails = adminServiceClient.getAdminEmails();
