@@ -6,14 +6,14 @@ public class AlertMessageDetails {
     private String studentName;
     private String lessonName;
     private String comment;
-    private int rating;
+    private String rating;
     private LocalDateTime date;
 
     // ✅ Constructors
     public AlertMessageDetails() {
     }
 
-    public AlertMessageDetails(String studentName, String lessonName, String comment, int rating, LocalDateTime date) {
+    public AlertMessageDetails(String studentName, String lessonName, String comment, String rating, LocalDateTime date) {
         this.studentName = studentName;
         this.lessonName = lessonName;
         this.comment = comment;
@@ -46,11 +46,11 @@ public class AlertMessageDetails {
         this.comment = comment;
     }
 
-    public int getRating() {
+    public String getRating() {
         return rating;
     }
 
-    public void setRating(int rating) {
+    public void setRating(String rating) {
         this.rating = rating;
     }
 

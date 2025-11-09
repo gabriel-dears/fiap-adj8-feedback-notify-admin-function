@@ -45,7 +45,7 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
             logger.info("✅ Email template loaded from: " + path.toAbsolutePath());
         } catch (IOException e) {
             logger.severe("❌ Failed to load email template: " + e.getMessage());
-            htmlTemplate = "<p>Template not found</p>"; // fallback simples
+            htmlTemplate = "<p>Template not found</p>";
         }
     }
 
@@ -58,38 +58,49 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
         String decoded = new String(Base64.getDecoder().decode(message.data));
         logger.info("📨 Received Pub/Sub message: " + decoded);
 
-        AlertMessageDetails feedback = gson.fromJson(decoded, AlertMessageDetails.class);
-        notifyAdmin(feedback);
+        AlertMessageDetails urgentFeedback = gson.fromJson(decoded, AlertMessageDetails.class);
+        notifyAdmin(urgentFeedback);
     }
 
-    private void notifyAdmin(AlertMessageDetails feedback) {
-        logger.info("📩 Notifying admins about feedback: " + feedback.getLessonName());
+    private void notifyAdmin(AlertMessageDetails urgentFeedback) {
+        logger.info("📩 Notifying admins about feedback: " + urgentFeedback.getLessonName());
 
-        List<String> adminEmails = adminServiceClient.getAdminEmails();
+        List<String> adminEmails = adminServiceClient.getAdminEmails(); // TODO: create endpoint in the BE app
         if (adminEmails.isEmpty()) {
             logger.info("⚠️ No admin emails found.");
             return;
         }
 
-        String htmlContent = htmlTemplate
-                .replace("{student}", feedback.getStudentName())
-                .replace("{lesson}", feedback.getLessonName())
-                .replace("{comment}", feedback.getComment())
-                .replace("{rating}", String.valueOf(feedback.getRating()))
-                .replace("{date}", feedback.getDate().toString());
+        String emailHtmlContent = getHtmlContent(urgentFeedback);
+        sendEmailForEachAdmin(urgentFeedback, adminEmails, emailHtmlContent);
+    }
 
+    private void sendEmailForEachAdmin(AlertMessageDetails urgentFeedback, List<String> adminEmails, String htmlContent) {
         for (String adminEmail : adminEmails) {
             try {
-                EmailInput emailInput = new EmailInput(
-                        adminEmail,
-                        String.format("Urgent feedback for lesson %s", feedback.getLessonName()),
-                        htmlContent
-                );
-                sender.send(emailInput);
-                logger.info("✅ Email sent to: " + adminEmail);
+                sendEmailToAdmin(urgentFeedback, htmlContent, adminEmail);
             } catch (Exception e) {
                 logger.warning("❌ Failed to send email to " + adminEmail + ": " + e.getMessage());
             }
         }
+    }
+
+    private void sendEmailToAdmin(AlertMessageDetails urgentFeedback, String htmlContent, String adminEmail) {
+        EmailInput emailInput = new EmailInput(
+                adminEmail,
+                String.format("Urgent feedback for lesson %s", urgentFeedback.getLessonName()),
+                htmlContent
+        );
+        sender.send(emailInput);
+        logger.info("✅ Email sent to: " + adminEmail);
+    }
+
+    private String getHtmlContent(AlertMessageDetails urgentFeedback) {
+        return htmlTemplate
+                .replace("{student}", urgentFeedback.getStudentName())
+                .replace("{lesson}", urgentFeedback.getLessonName())
+                .replace("{comment}", urgentFeedback.getComment())
+                .replace("{rating}", urgentFeedback.getRating())
+                .replace("{date}", urgentFeedback.getDate().toString());
     }
 }
