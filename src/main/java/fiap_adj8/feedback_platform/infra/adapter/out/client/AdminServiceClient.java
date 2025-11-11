@@ -6,11 +6,12 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 import java.util.List;
 
-@Path("/api/admins")
+@Path("/user")
 @RegisterRestClient(configKey = "feedback-app-api")
 public interface AdminServiceClient {
 
     @GET
+    @Path("/admin/email")
     List<String> getAdminEmails();
 
 }

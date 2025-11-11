@@ -55,27 +55,33 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
 
     @Override
     public void accept(PubSubMessage message, Context context) {
+        AlertMessageDetails urgentFeedback = getAlertMessageDetails(message);
+        notifyAdmin(urgentFeedback);
+    }
+
+    private static AlertMessageDetails getAlertMessageDetails(PubSubMessage message) {
         String decoded = new String(Base64.getDecoder().decode(message.data));
         logger.info("📨 Received Pub/Sub message: " + decoded);
 
-        AlertMessageDetails urgentFeedback = gson.fromJson(decoded, AlertMessageDetails.class);
-        notifyAdmin(urgentFeedback);
+        return gson.fromJson(decoded, AlertMessageDetails.class);
     }
 
     private void notifyAdmin(AlertMessageDetails urgentFeedback) {
         logger.info("📩 Notifying admins about feedback: " + urgentFeedback.getLessonName());
 
-        List<String> adminEmails = adminServiceClient.getAdminEmails(); // TODO: create endpoint in the BE app
+        List<String> adminEmails = adminServiceClient.getAdminEmails();
+        // TODO: create endpoint in the BE app
+        // TODO: validate all required dependencies and remove the optionals
         if (adminEmails.isEmpty()) {
             logger.info("⚠️ No admin emails found.");
             return;
         }
 
         String emailHtmlContent = getHtmlContent(urgentFeedback);
-        sendEmailForEachAdmin(urgentFeedback, adminEmails, emailHtmlContent);
+        sendEmailToAllAdmins(urgentFeedback, adminEmails, emailHtmlContent);
     }
 
-    private void sendEmailForEachAdmin(AlertMessageDetails urgentFeedback, List<String> adminEmails, String htmlContent) {
+    private void sendEmailToAllAdmins(AlertMessageDetails urgentFeedback, List<String> adminEmails, String htmlContent) {
         for (String adminEmail : adminEmails) {
             try {
                 sendEmailToAdmin(urgentFeedback, htmlContent, adminEmail);
