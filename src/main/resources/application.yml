@@ -1,7 +1,10 @@
 quarkus:
   rest-client:
     feedback-app-api:
-      url: http://feedback-app:8080
+      url: http://localhost:8081
+      headers:
+        Authorization: Basic YWRtaW5AZW1haWwuY29tOmFkbWlu
+
   mailer:
     from: "no-reply@yourdomain.com"
     host: "smtp.gmail.com"

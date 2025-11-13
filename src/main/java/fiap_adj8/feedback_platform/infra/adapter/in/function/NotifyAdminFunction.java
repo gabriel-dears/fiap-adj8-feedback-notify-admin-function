@@ -3,6 +3,7 @@ package fiap_adj8.feedback_platform.infra.adapter.in.function;
 import com.google.cloud.functions.BackgroundFunction;
 import com.google.cloud.functions.Context;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import fiap_adj8.feedback_platform.application.port.out.client.AdminServiceClientPort;
 import fiap_adj8.feedback_platform.application.port.out.email.EmailSender;
 import fiap_adj8.feedback_platform.application.port.out.email.input.EmailInput;
@@ -16,6 +17,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -24,7 +27,19 @@ import java.util.logging.Logger;
 public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFunction.PubSubMessage> {
 
     private static final Logger logger = Logger.getLogger(NotifyAdminFunction.class.getName());
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(LocalDateTime.class,
+                    (com.google.gson.JsonSerializer<LocalDateTime>)
+                            (src, typeOfSrc, context) ->
+                                    new com.google.gson.JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+            )
+            .registerTypeAdapter(LocalDateTime.class,
+                    (com.google.gson.JsonDeserializer<LocalDateTime>)
+                            (json, typeOfT, context) ->
+                                    LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            )
+            .create();
+
 
     @Inject
     EmailSender sender;
