@@ -61,4 +61,16 @@ public class AlertMessageDetails {
     public void setDate(LocalDateTime date) {
         this.date = date;
     }
+
+    @Override
+    public String toString() {
+        return "AlertMessageDetails {" +
+               "studentName='" + studentName + '\'' +
+               ", lessonName='" + lessonName + '\'' +
+               ", comment='" + comment + '\'' +
+               ", rating='" + rating + '\'' +
+               ", date=" + date +
+               '}';
+    }
+
 }

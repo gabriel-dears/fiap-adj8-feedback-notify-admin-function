@@ -4,6 +4,12 @@ quarkus:
       url: http://localhost:8081
       headers:
         Authorization: Basic YWRtaW5AZW1haWwuY29tOmFkbWlu
+  funqy:
+    http:
+      enabled: true
+      root-path: /
+      cloud-events:
+        enabled: true
 
   mailer:
     from: "no-reply@yourdomain.com"

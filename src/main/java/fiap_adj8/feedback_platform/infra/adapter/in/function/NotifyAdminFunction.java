@@ -1,13 +1,14 @@
 package fiap_adj8.feedback_platform.infra.adapter.in.function;
 
-import com.google.cloud.functions.BackgroundFunction;
-import com.google.cloud.functions.Context;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import fiap_adj8.feedback_platform.application.port.out.client.AdminServiceClientPort;
 import fiap_adj8.feedback_platform.application.port.out.email.EmailSender;
 import fiap_adj8.feedback_platform.application.port.out.email.input.EmailInput;
 import fiap_adj8.feedback_platform.domain.model.AlertMessageDetails;
+import io.quarkus.funqy.Funq;
+import io.quarkus.funqy.knative.events.CloudEvent;
+import io.quarkus.funqy.knative.events.CloudEventMapping;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -24,12 +25,15 @@ import java.util.List;
 import java.util.logging.Logger;
 
 @ApplicationScoped
-public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFunction.PubSubMessage> {
+public class NotifyAdminFunction {
 
     private static final Logger logger = Logger.getLogger(NotifyAdminFunction.class.getName());
-    private static final Gson gson = new GsonBuilder()
+
+    // CORREÇÃO: Gson movido para instância final não estática para segurança de thread e CDI
+    private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class,
                     (com.google.gson.JsonSerializer<LocalDateTime>)
+                            // Context é um parâmetro de lambda/interface, não o Context do GCF
                             (src, typeOfSrc, context) ->
                                     new com.google.gson.JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
             )
@@ -55,7 +59,8 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
 
     void onStart(@Observes StartupEvent event) {
         try {
-            Path path = Path.of("src/main/resources", templatePath);
+            // OBS: O carregamento de recursos pode precisar de ClassLoader em produção
+            Path path = Path.of(templatePath);
             htmlTemplate = Files.readString(path);
             logger.info("✅ Email template loaded from: " + path.toAbsolutePath());
         } catch (IOException e) {
@@ -64,29 +69,46 @@ public class NotifyAdminFunction implements BackgroundFunction<NotifyAdminFuncti
         }
     }
 
-    public static class PubSubMessage {
-        public String data;
+    public static class PubSubEnvelope {
+        public Message message;
+
+        public static class Message {
+            public String data;
+        }
     }
 
-    @Override
-    public void accept(PubSubMessage message, Context context) {
-        AlertMessageDetails urgentFeedback = getAlertMessageDetails(message);
-        notifyAdmin(urgentFeedback);
+    @Funq("notifyAdminPubSubHandler")
+    @CloudEventMapping(trigger = "google.cloud.pubsub.topic.v1.messagePublished")
+    public void notifyAdminPubSubHandler(CloudEvent<PubSubEnvelope> event) {
+        try {
+            if (event.data() == null ||
+                event.data().message == null ||
+                event.data().message.data == null) {
+                logger.warning("⚠️ Received Pub/Sub event with no data");
+                return;
+            }
+            String encoded = event.data().message.data;
+            AlertMessageDetails urgentFeedback = getAlertMessageDetails(encoded);
+            logger.info("Alert Message details received: " + urgentFeedback);
+            notifyAdmin(urgentFeedback);
+        } catch (Exception e) {
+            logger.severe("Error with notifyAdminPubSubHandler: " + e.getMessage());
+        }
     }
 
-    private static AlertMessageDetails getAlertMessageDetails(PubSubMessage message) {
-        String decoded = new String(Base64.getDecoder().decode(message.data));
+    // CORREÇÃO: Método não é mais estático para poder usar 'this.gson'
+    private AlertMessageDetails getAlertMessageDetails(String encoded) {
+        String decoded = new String(Base64.getDecoder().decode(encoded));
         logger.info("📨 Received Pub/Sub message: " + decoded);
-
-        return gson.fromJson(decoded, AlertMessageDetails.class);
+        String test = new String(Base64.getDecoder().decode(decoded));
+        logger.info("📨 Received Pub/Sub message test: " + test);
+        return gson.fromJson(test, AlertMessageDetails.class);
     }
 
     private void notifyAdmin(AlertMessageDetails urgentFeedback) {
         logger.info("📩 Notifying admins about feedback: " + urgentFeedback.getLessonName());
 
         List<String> adminEmails = adminServiceClient.getAdminEmails();
-        // TODO: create endpoint in the BE app
-        // TODO: validate all required dependencies and remove the optionals
         if (adminEmails.isEmpty()) {
             logger.info("⚠️ No admin emails found.");
             return;
