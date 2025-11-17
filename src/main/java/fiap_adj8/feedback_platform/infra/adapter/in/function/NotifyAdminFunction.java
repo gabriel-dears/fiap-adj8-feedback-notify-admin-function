@@ -27,6 +27,15 @@ import java.util.logging.Logger;
 @ApplicationScoped
 public class NotifyAdminFunction {
 
+    // TODO: fazer o mesmo para o weekly report -> analisar último commit
+    // TODO: deployar banco POSTGRES_16
+    // TODO: deployar app
+    // TODO: apontar host certo nas functions
+    // TODO: segurança -> secrets... variáveis de ambiente...
+    // TODO: questão de acesso...
+    // TODO: monitoramento...
+    // TODO: documentação
+
     private static final Logger logger = Logger.getLogger(NotifyAdminFunction.class.getName());
 
     // CORREÇÃO: Gson movido para instância final não estática para segurança de thread e CDI
@@ -59,7 +68,6 @@ public class NotifyAdminFunction {
 
     void onStart(@Observes StartupEvent event) {
         try {
-            // OBS: O carregamento de recursos pode precisar de ClassLoader em produção
             Path path = Path.of(templatePath);
             htmlTemplate = Files.readString(path);
             logger.info("✅ Email template loaded from: " + path.toAbsolutePath());
