@@ -4,3 +4,5 @@
 !target/lib/*
 !target/quarkus-app/*
 !src/main/resources/templates/feedback-alert.html
+!pom.xml
+!src
