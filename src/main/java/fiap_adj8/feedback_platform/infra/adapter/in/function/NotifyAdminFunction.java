@@ -1,14 +1,14 @@
 package fiap_adj8.feedback_platform.infra.adapter.in.function;
 
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import fiap_adj8.feedback_platform.application.port.out.client.AdminServiceClientPort;
 import fiap_adj8.feedback_platform.application.port.out.email.EmailSender;
 import fiap_adj8.feedback_platform.application.port.out.email.input.EmailInput;
 import fiap_adj8.feedback_platform.domain.model.AlertMessageDetails;
-import io.quarkus.funqy.Funq;
-import io.quarkus.funqy.knative.events.CloudEvent;
-import io.quarkus.funqy.knative.events.CloudEventMapping;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -25,34 +25,21 @@ import java.util.List;
 import java.util.logging.Logger;
 
 @ApplicationScoped
-public class NotifyAdminFunction {
-
-    // TODO: fazer o mesmo para o weekly report -> analisar último commit
-    // TODO: deployar banco POSTGRES_16
-    // TODO: deployar app
-    // TODO: apontar host certo nas functions
-    // TODO: segurança -> secrets... variáveis de ambiente...
-    // TODO: questão de acesso...
-    // TODO: monitoramento...
-    // TODO: documentação
+public class NotifyAdminFunction implements RequestHandler<SNSEvent, Void> {
 
     private static final Logger logger = Logger.getLogger(NotifyAdminFunction.class.getName());
 
-    // CORREÇÃO: Gson movido para instância final não estática para segurança de thread e CDI
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class,
                     (com.google.gson.JsonSerializer<LocalDateTime>)
-                            // Context é um parâmetro de lambda/interface, não o Context do GCF
-                            (src, typeOfSrc, context) ->
-                                    new com.google.gson.JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-            )
+                            (src, typeOfSrc, ctx) ->
+                                    new com.google.gson.JsonPrimitive(
+                                            src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
             .registerTypeAdapter(LocalDateTime.class,
                     (com.google.gson.JsonDeserializer<LocalDateTime>)
-                            (json, typeOfT, context) ->
-                                    LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-            )
+                            (json, typeOfT, ctx) ->
+                                    LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
             .create();
-
 
     @Inject
     EmailSender sender;
@@ -77,42 +64,42 @@ public class NotifyAdminFunction {
         }
     }
 
-    public static class PubSubEnvelope {
-        public Message message;
-
-        public static class Message {
-            public String data;
-        }
-    }
-
-    @Funq("notifyAdminPubSubHandler")
-    @CloudEventMapping(trigger = "google.cloud.pubsub.topic.v1.messagePublished")
-    public void notifyAdminPubSubHandler(CloudEvent<PubSubEnvelope> event) {
+    // ======================================================
+    // 🔥 HANDLER REAL DA AWS LAMBDA (SNS EVENT)
+    // ======================================================
+    @Override
+    public Void handleRequest(SNSEvent event, Context context) {
         try {
-            if (event.data() == null ||
-                event.data().message == null ||
-                event.data().message.data == null) {
-                logger.warning("⚠️ Received Pub/Sub event with no data");
-                return;
+            if (event.getRecords() == null || event.getRecords().isEmpty()) {
+                logger.warning("⚠️ SNS event has no records");
+                return null;
             }
-            String encoded = event.data().message.data;
-            AlertMessageDetails urgentFeedback = getAlertMessageDetails(encoded);
+
+            String encoded = event.getRecords().getFirst().getSNS().getMessage();
+            logger.info("📨 Received SNS payload encoded: " + encoded);
+
+            AlertMessageDetails urgentFeedback = decode(encoded);
+
             logger.info("Alert Message details received: " + urgentFeedback);
+
             notifyAdmin(urgentFeedback);
+
         } catch (Exception e) {
-            logger.severe("Error with notifyAdminPubSubHandler: " + e.getMessage());
+            logger.severe("❌ Error in handleRequest: " + e.getMessage());
         }
+        return null;
     }
 
-    // CORREÇÃO: Método não é mais estático para poder usar 'this.gson'
-    private AlertMessageDetails getAlertMessageDetails(String encoded) {
+    // ✓ agora compatível com SNS (mantendo sua lógica original)
+    private AlertMessageDetails decode(String encoded) {
         String decoded = new String(Base64.getDecoder().decode(encoded));
-        logger.info("📨 Received Pub/Sub message: " + decoded);
-        String test = new String(Base64.getDecoder().decode(decoded));
-        logger.info("📨 Received Pub/Sub message test: " + test);
-        return gson.fromJson(test, AlertMessageDetails.class);
+        logger.info("📨 Decoded SNS payload: " + decoded);
+        return gson.fromJson(decoded, AlertMessageDetails.class);
     }
 
+    // ======================================================
+    // 🔥 Lógica de notificação — igual ao seu código original
+    // ======================================================
     private void notifyAdmin(AlertMessageDetails urgentFeedback) {
         logger.info("📩 Notifying admins about feedback: " + urgentFeedback.getLessonName());
 
