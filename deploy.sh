@@ -49,6 +49,7 @@ if aws lambda get-function --function-name ${SERVICE_NAME} --region ${AWS_REGION
     # Update Function Configuration (in case you change Memory/Timeout/VPC settings)
     aws lambda update-function-configuration \
         --function-name ${SERVICE_NAME} \
+        --handler "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest" \
         --timeout 30 \
         --memory-size 512 \
         --region ${AWS_REGION} \

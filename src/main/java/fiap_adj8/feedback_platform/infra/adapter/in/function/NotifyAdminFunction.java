@@ -10,9 +10,11 @@ import fiap_adj8.feedback_platform.application.port.out.email.EmailSender;
 import fiap_adj8.feedback_platform.application.port.out.email.input.EmailInput;
 import fiap_adj8.feedback_platform.domain.model.AlertMessageDetails;
 import io.quarkus.runtime.StartupEvent;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
@@ -24,6 +26,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
 
+@Named("notifyAdmin")
+@RegisterForReflection
 @ApplicationScoped
 public class NotifyAdminFunction implements RequestHandler<SNSEvent, Void> {
 
@@ -69,6 +73,7 @@ public class NotifyAdminFunction implements RequestHandler<SNSEvent, Void> {
     // ======================================================
     @Override
     public Void handleRequest(SNSEvent event, Context context) {
+        logger.info("Handle NotifyAdminFunction");
         try {
             if (event.getRecords() == null || event.getRecords().isEmpty()) {
                 logger.warning("⚠️ SNS event has no records");
@@ -103,7 +108,8 @@ public class NotifyAdminFunction implements RequestHandler<SNSEvent, Void> {
     private void notifyAdmin(AlertMessageDetails urgentFeedback) {
         logger.info("📩 Notifying admins about feedback: " + urgentFeedback.getLessonName());
 
-        List<String> adminEmails = adminServiceClient.getAdminEmails();
+//        List<String> adminEmails = adminServiceClient.getAdminEmails();
+        List<String> adminEmails = List.of("gabrieldears@gmail.com");
         if (adminEmails.isEmpty()) {
             logger.info("⚠️ No admin emails found.");
             return;
@@ -139,6 +145,6 @@ public class NotifyAdminFunction implements RequestHandler<SNSEvent, Void> {
                 .replace("{lesson}", urgentFeedback.getLessonName())
                 .replace("{comment}", urgentFeedback.getComment())
                 .replace("{rating}", urgentFeedback.getRating())
-                .replace("{date}", urgentFeedback.getDate().toString());
+                .replace("{date}", urgentFeedback.getDate() != null ? urgentFeedback.getDate().toString() : "");
     }
 }
