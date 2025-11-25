@@ -83,7 +83,7 @@ public class NotifyAdminFunction implements BackgroundFunction<PubSubMessage> {
                 .replace("{date}", feedback.getDate() != null ? feedback.getDate().toString() : "");
         emailSender.send(new EmailInput(
                 to,
-                "Urgent feedback for lesson " + feedback.getLessonName(),
+                "🚨 Urgent feedback for lesson " + feedback.getLessonName(),
                 content
         ));
     }

@@ -36,7 +36,7 @@ public class JakartaMailSender implements EmailSender {
             message.setFrom(new InternetAddress(from));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailInput.to()));
             message.setSubject(emailInput.subject());
-            message.setContent(emailInput.htmlContent(), "text/html");
+            message.setContent(emailInput.htmlContent(), "text/html; charset=UTF-8");
 
             Transport.send(message);
         } catch (Exception e) {
