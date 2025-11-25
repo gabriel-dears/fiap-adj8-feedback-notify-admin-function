@@ -4,11 +4,13 @@ import com.google.cloud.functions.BackgroundFunction;
 import com.google.cloud.functions.Context;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import fiap_adj8.feedback_platform.application.port.out.client.AdminServiceClientPort;
 import fiap_adj8.feedback_platform.application.port.out.email.EmailSender;
 import fiap_adj8.feedback_platform.application.port.out.email.input.EmailInput;
 import fiap_adj8.feedback_platform.application.port.out.template.TemplateProvider;
 import fiap_adj8.feedback_platform.domain.model.AlertMessageDetails;
 import fiap_adj8.feedback_platform.domain.model.PubSubMessage;
+import fiap_adj8.feedback_platform.infra.adapter.out.client.AdminServiceClientAdapter;
 import fiap_adj8.feedback_platform.infra.adapter.out.email.JakartaMailSender;
 import fiap_adj8.feedback_platform.infra.adapter.out.template.TemplateLoader;
 
@@ -30,6 +32,8 @@ public class NotifyAdminFunction implements BackgroundFunction<PubSubMessage> {
             .create();
 
     private final EmailSender emailSender = new JakartaMailSender();
+
+    private final AdminServiceClientPort adminServiceClientPort = new AdminServiceClientAdapter();
 
     private final String template;
 
@@ -58,7 +62,7 @@ public class NotifyAdminFunction implements BackgroundFunction<PubSubMessage> {
     }
 
     private void notifyAdmins(AlertMessageDetails feedback) {
-        List<String> adminEmails = List.of("gabrieldears@gmail.com");
+        List<String> adminEmails = adminServiceClientPort.getAdminEmails();
 
         for (String email : adminEmails) {
             try {
