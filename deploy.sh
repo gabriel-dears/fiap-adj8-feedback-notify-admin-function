@@ -33,7 +33,7 @@ gcloud pubsub topics publish "$TOPIC_NAME" \
     \"studentName\":\"Deploy Tester\",
     \"lessonName\":\"Kubernetes Basics\",
     \"comment\":\"This is a test alert generated after deploy\",
-    \"rating\":\"5\",
+    \"rating\":\"FIVE\",
     \"date\":\"$(date '+%Y-%m-%dT%H:%M:%S')\"
   }"
 

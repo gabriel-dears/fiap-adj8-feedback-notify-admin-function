@@ -75,11 +75,14 @@ public class NotifyAdminFunction implements BackgroundFunction<PubSubMessage> {
     }
 
     private void sendEmail(String to, AlertMessageDetails feedback) {
+
+        String numericRating = convertRatingWordToNumber(feedback.getRating());
+
         String content = template
                 .replace("{student}", feedback.getStudentName())
                 .replace("{lesson}", feedback.getLessonName())
                 .replace("{comment}", feedback.getComment())
-                .replace("{rating}", feedback.getRating())
+                .replace("{rating}", numericRating)
                 .replace("{date}", feedback.getDate() != null ? feedback.getDate().toString() : "");
         emailSender.send(new EmailInput(
                 to,
@@ -87,4 +90,19 @@ public class NotifyAdminFunction implements BackgroundFunction<PubSubMessage> {
                 content
         ));
     }
+
+    private String convertRatingWordToNumber(String rating) {
+        if (rating == null) return "";
+
+        return switch (rating.toUpperCase()) {
+            case "ONE" -> "1";
+            case "TWO" -> "2";
+            case "THREE" -> "3";
+            case "FOUR" -> "4";
+            case "FIVE" -> "5";
+            default -> rating;
+        };
+    }
+
+
 }
