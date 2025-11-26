@@ -1,0 +1,13 @@
+digraph notify_admin {
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightblue];
+
+    FeedbackApp [label="Feedback App\n(Publisher)"];
+    PubSub [label="Pub/Sub\nTopic: feedback-alerts"];
+    Function [label="notify-admin-function\n(Cloud Function)"];
+    Admin [label="Admin Emails"];
+
+    FeedbackApp -> PubSub [label="(feedback urgente)"];
+    PubSub -> Function;
+    Function -> Admin;
+}
