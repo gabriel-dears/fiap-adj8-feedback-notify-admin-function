@@ -1,41 +1,79 @@
 #!/bin/bash
 set -e
 
+########################################
+# CONFIGURAÇÕES
+########################################
 FUNCTION_NAME="notify-admin"
 TOPIC_NAME="feedback-alerts"
 REGION="us-central1"
 ENTRY_POINT="fiap_adj8.feedback_platform.infra.adapter.in.NotifyAdminFunction"
+SERVICE_ACCOUNT="sa-deploy-notify-admin@fiap-adj8-feedback-platform.iam.gserviceaccount.com"
+RUNTIME="java17"
+MEMORY="512MB"
+TIMEOUT="60s"
 
-echo "🚀 Deploying $FUNCTION_NAME..."
+########################################
+# FUNÇÕES
+########################################
+log() {
+  echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
 
-# 1. Create Pub/Sub topic if not exists
-if ! gcloud pubsub topics describe $TOPIC_NAME >/dev/null 2>&1; then
-  echo "📌 Creating Pub/Sub topic: $TOPIC_NAME"
-  gcloud pubsub topics create $TOPIC_NAME
+########################################
+# 1. Criar tópico Pub/Sub se não existir
+########################################
+if ! gcloud pubsub topics describe "$TOPIC_NAME" >/dev/null 2>&1; then
+  log "📌 Criando Pub/Sub topic: $TOPIC_NAME"
+  gcloud pubsub topics create "$TOPIC_NAME" --quiet
 else
-  echo "✅ Topic already exists: $TOPIC_NAME"
+  log "✅ Topic já existe: $TOPIC_NAME"
 fi
 
-# 2. Deploy Cloud Function
-gcloud functions deploy $FUNCTION_NAME \
-  --runtime java17 \
-  --trigger-topic $TOPIC_NAME \
-  --entry-point $ENTRY_POINT \
-  --region $REGION
+########################################
+# 2. Deploy / Update da Cloud Function
+########################################
+if gcloud functions describe "$FUNCTION_NAME" --region "$REGION" >/dev/null 2>&1; then
+  log "🔄 Função $FUNCTION_NAME já existe - atualizando..."
+  gcloud functions deploy "$FUNCTION_NAME" \
+    --runtime "$RUNTIME" \
+    --trigger-topic "$TOPIC_NAME" \
+    --entry-point "$ENTRY_POINT" \
+    --region "$REGION" \
+    --service-account "$SERVICE_ACCOUNT" \
+    --memory "$MEMORY" \
+    --timeout "$TIMEOUT" \
+    --quiet
+else
+  log "🚀 Criando função $FUNCTION_NAME..."
+  gcloud functions deploy "$FUNCTION_NAME" \
+    --runtime "$RUNTIME" \
+    --trigger-topic "$TOPIC_NAME" \
+    --entry-point "$ENTRY_POINT" \
+    --region "$REGION" \
+    --service-account "$SERVICE_ACCOUNT" \
+    --memory "$MEMORY" \
+    --timeout "$TIMEOUT" \
+    --quiet
+fi
 
-echo "✅ Function deployed successfully"
+########################################
+# 3. Enviar mensagem de teste
+########################################
+log "📨 Enviando mensagem de teste para topic $TOPIC_NAME..."
 
-# 3. Send validation message
-echo "📨 Sending validation message to topic..."
+MESSAGE=$(jq -n \
+  --arg studentName "Deploy Tester" \
+  --arg lessonName "Kubernetes Basics" \
+  --arg comment "This is a test alert generated after deploy" \
+  --arg rating "FIVE" \
+  --arg date "$(date '+%Y-%m-%dT%H:%M:%S')" \
+  '{studentName: $studentName, lessonName: $lessonName, comment: $comment, rating: $rating, date: $date}')
 
-gcloud pubsub topics publish "$TOPIC_NAME" \
-  --message="{
-    \"studentName\":\"Deploy Tester\",
-    \"lessonName\":\"Kubernetes Basics\",
-    \"comment\":\"This is a test alert generated after deploy\",
-    \"rating\":\"FIVE\",
-    \"date\":\"$(date '+%Y-%m-%dT%H:%M:%S')\"
-  }"
+gcloud pubsub topics publish "$TOPIC_NAME" --message="$MESSAGE" --quiet
 
-echo "🎯 Test message sent. Check logs to verify execution."
+########################################
+# 4. Logs de validação
+########################################
+log "🎯 Test message enviada. Confira os logs da função:"
 echo "👉 gcloud functions logs read $FUNCTION_NAME --region $REGION --limit 50"
