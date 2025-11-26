@@ -132,6 +132,7 @@ notify-admin-function/
 │                           │   └── JakartaMailSender.java
 │                           └── template
 │                               └── TemplateLoader.java
+├── src/main/resources/templates/notify-admin.html
 ├── pom.xml
 ├── deploy.sh
 ├── notify_admin.dot
