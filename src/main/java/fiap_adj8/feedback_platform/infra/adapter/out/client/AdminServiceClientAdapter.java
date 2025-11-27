@@ -18,16 +18,26 @@ public class AdminServiceClientAdapter implements AdminServiceClientPort {
     private final Gson gson = new Gson();
 
     public AdminServiceClientAdapter() {
-        this.baseUrl = "https://fiap-feedback-app-dot-fiap-adj8-feedback-platform.uc.r.appspot.com";
+        this.baseUrl = System.getenv("ADMIN_SERVICE_BASE_URL");
+
+        if (this.baseUrl == null || this.baseUrl.isBlank()) {
+            throw new RuntimeException("ADMIN_SERVICE_BASE_URL não definida");
+        }
     }
 
     @Override
     public List<String> getAdminEmails() {
         try {
+            String authHeader = System.getenv("ADMIN_SERVICE_AUTH");
+
+            if (authHeader == null || authHeader.isBlank()) {
+                throw new RuntimeException("ADMIN_SERVICE_AUTH não definida");
+            }
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(baseUrl + "/user/admin/email"))
                     .header("Accept", "application/json")
-                    .header("Authorization", "Basic YWRtaW5AZW1haWwuY29tOmFkbWlu")
+                    .header("Authorization", "Basic " + authHeader)
                     .GET()
                     .build();
 
@@ -49,3 +59,4 @@ public class AdminServiceClientAdapter implements AdminServiceClientPort {
         }
     }
 }
+

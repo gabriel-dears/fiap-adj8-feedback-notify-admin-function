@@ -17,30 +17,41 @@ public class JakartaMailSender implements EmailSender {
     public void send(EmailInput emailInput) {
 
         try {
-            String from = "gabrieldears@gmail.com"; // configure seu email real
-            String host = "smtp.gmail.com";
+            String from = System.getenv("EMAIL_SMTP_FROM");
+            String password = System.getenv("EMAIL_SMTP_PASSWORD");
+            String host = System.getenv("EMAIL_SMTP_HOST");
+            String port = System.getenv("EMAIL_SMTP_PORT");
+
+            if (from == null || password == null || host == null || port == null) {
+                throw new RuntimeException("Variáveis SMTP não configuradas corretamente");
+            }
 
             Properties properties = new Properties();
             properties.put("mail.smtp.auth", "true");
             properties.put("mail.smtp.starttls.enable", "true");
             properties.put("mail.smtp.host", host);
-            properties.put("mail.smtp.port", "587");
+            properties.put("mail.smtp.port", port);
 
             Session session = Session.getInstance(properties, new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(from, "xzqp btbu torv hehk");
+                    return new PasswordAuthentication(from, password);
                 }
             });
 
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress(from));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailInput.to()));
+            message.setRecipients(
+                    Message.RecipientType.TO,
+                    InternetAddress.parse(emailInput.to())
+            );
             message.setSubject(emailInput.subject());
             message.setContent(emailInput.htmlContent(), "text/html; charset=UTF-8");
 
             Transport.send(message);
+
         } catch (Exception e) {
             logger.warning("Sending email failed: " + e.getMessage());
         }
     }
 }
+
