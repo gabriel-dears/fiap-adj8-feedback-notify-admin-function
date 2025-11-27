@@ -39,13 +39,37 @@ Ela é acionada automaticamente quando uma mensagem é publicada no tópico **Pu
 chmod +x deploy.sh
 ```
 
-2. Executar o deploy:
+2. 📋 Configuração do .env
+
+    O arquivo .env é necessário para fornecer variáveis sensíveis e URLs externas que a função Cloud Function precisa para operar.
+    Crie o arquivo .env na raiz do projeto com o seguinte conteúdo (no mesmo nível que o arquivo deploy.sh):
+```text
+    # Admin Service
+    ADMIN_SERVICE_BASE_URL=https://fiap-feedback-app-dot-fiap-adj8-feedback-platform.uc.r.appspot.com
+    ADMIN_SERVICE_AUTH=YWRtaW5AZW1haWwuY29tOmFkbWlu
+    
+    # Configuração SMTP
+    EMAIL_SMTP_FROM=[SEU_EMAIL]
+    EMAIL_SMTP_PASSWORD=[SUA_SENHA]
+    EMAIL_SMTP_HOST=smtp.gmail.com
+    EMAIL_SMTP_PORT=587
+```    
+    
+    ⚠️ Importante: Substitua [SEU_EMAIL] e [SUA_SENHA] pelas suas credenciais reais de SMTP.
+    Estas informações são utilizadas para envio de notificações por email pela função notify-admin.
+
+3. Executar o deploy:
 
 ```bash
 ./deploy.sh
 ```
 
 O script realiza automaticamente:
+
+
+- Lê o arquivo .env local.
+
+- Gera um arquivo env.yaml usado pela Cloud Function durante o deploy.
 
 - Criação do tópico Pub/Sub feedback-alerts (se não existir)
 
